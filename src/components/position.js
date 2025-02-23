@@ -1,0 +1,1 @@
+export const createPosition = (x, y) => ({ x, y });
