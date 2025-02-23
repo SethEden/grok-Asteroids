@@ -10,7 +10,7 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
   const scene = new BABYLON.Scene(babylonEngine);
   scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
 
-  const camera = new BABYLON.FreeCamera('camera', new BABYLON.Vector3(0, 0, -10), scene);
+  const camera = new BABYLON.FreeCamera('camera', new BABYLON.Vector3(0, 0, -500), scene);
   camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
   camera.setTarget(BABYLON.Vector3.Zero());
 
