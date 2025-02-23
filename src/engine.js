@@ -3,6 +3,7 @@ import { updateMovement } from './systems/movement.js';
 import { updateRendering } from './systems/rendering.js';
 import { setupInput, updateInput } from './systems/input.js';
 import { setEntities } from './state.js';
+import { ipcRenderer } from 'electron';
 
 export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
   const babylonEngine = new BABYLON.Engine(canvas, true);
@@ -22,6 +23,7 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
   camera.orthoRight = offset + screenWidth - worldWidth / 2;
   camera.orthoBottom = -currentDisplay.bounds.height / 2;
   camera.orthoTop = currentDisplay.bounds.height / 2;
+  ipcRenderer.send('log', `Camera ${currentDisplayId}: ${camera.orthoLeft}, ${camera.orthoRight}, ${camera.orthoBottom}, ${camera.orthoTop}, pos: ${camera.position.x}, ${camera.position.y}, ${camera.position.z}`);
 
   const spriteManager = new BABYLON.SpriteManager('sprites', 'assets/sprites.png', 100, 64, scene);
   const entities = createEntities({ BABYLON, scene, spriteManager });
@@ -34,6 +36,7 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
   ];
 
   setupInput(entities, { canvas, displays, currentDisplayId }); // One-time setup
+  ipcRenderer.send('log', `Scene meshes: ${scene.meshes.length}, names: ${scene.meshes.map(m => m.name).join(', ')}`);
 
   let lastTime = performance.now();
   const run = () => {
@@ -46,6 +49,7 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
       systems[1](entities);
       systems[2](entities); // Empty for now
       scene.render();
+      ipcRenderer.send('log', `Rendering frame for display ${currentDisplayId}`);
     };
     babylonEngine.runRenderLoop(loop);
   };
