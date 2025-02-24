@@ -10,11 +10,14 @@ export const setupInput = (entities, { canvas, displays, currentDisplayId }) => 
       const screenHeight = canvas.height;
       const minX = Math.min(...displays.map(d => d.bounds.x));
       const currentDisplay = displays.find(d => d.id === currentDisplayId);
-      const worldXOffset = currentDisplay.bounds.x - minX;
+
+      // Calculate display's starting X in centered world coordinates
+      const totalWidth = worldWidth;
+      const displayStartX = (currentDisplay.bounds.x - minX) - totalWidth / 2;
 
       // Map mouse coordinates to world coordinates
-      const worldX = worldXOffset + (x / screenWidth) * screenWidth;
-      const worldY = worldHeight - (y / screenHeight) * worldHeight; // Y increases upwards
+      const worldX = displayStartX + x;
+      const worldY = (screenHeight / 2) - y;
 
       player.position.x = worldX;
       player.position.y = worldY;

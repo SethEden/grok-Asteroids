@@ -33,24 +33,50 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
   camera.keysRight = [];
 
   // Set FOV for 2D-like view (adjusted for screen width)
-  camera.fov = 1.74; // ≈ 100 degrees, calculated for screenWidth = 1920 units
+  // Set FOV
+  camera.fov = 1.74; // Vertical FOV ≈ 100 degrees
 
   // Position camera for this display
   camera.position.x = worldXOffset + screenWidth / 2 - worldWidth / 2;
   camera.position.y = 0;
-  // Calculate the target point along the negative Z-axis from the camera's position
-  const distance = -200; // Arbitrary positive distance; adjust based on your scene scale
+
+  // Calculate horizontal FOV
+  const aspectRatio = canvas.width / canvas.height;
+  const verticalFov = camera.fov;
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspectRatio);
+
+  // Calculate distance d for frustum width = screenWidth at Z=0
+  const d = screenWidth / (2 * Math.tan(horizontalFov / 2));
+  camera.position.z = -d;
+
+  // Set target with offset towards positive Z (less negative)
+  const targetOffsetZ = 200; // Matches current offset
   const target = new BABYLON.Vector3(
     camera.position.x,
     camera.position.y,
-    camera.position.z - distance
+    camera.position.z + targetOffsetZ
   );
 
-  // Set the target and lock it
+  // Set and lock target
   camera.setTarget(target);
   camera.lockedTarget = target;
+
+  // Log camera and target positions
   ipcRenderer.send('log', `Camera Position: ${currentDisplayId}: pos: ${camera.position.x}, ${camera.position.y}, ${camera.position.z}, fov: ${camera.fov}`);
   ipcRenderer.send('log', `Camera Target: ${currentDisplayId}: pos: ${target.x}, ${target.y}, ${target.z}`);
+
+  // Log view frustum at Z=0 for verification
+  const widthAtZ0 = 2 * d * Math.tan(horizontalFov / 2);
+  const heightAtZ0 = 2 * d * Math.tan(verticalFov / 2);
+  const frustumMinX = camera.position.x - widthAtZ0 / 2;
+  const frustumMaxX = camera.position.x + widthAtZ0 / 2;
+  const frustumMinY = camera.position.y - heightAtZ0 / 2;
+  const frustumMaxY = camera.position.y + heightAtZ0 / 2;
+  ipcRenderer.send('log', `View frustum at Z=0 for display ${currentDisplayId}:
+    Upper-Left Corner: (${frustumMinX.toFixed(2)}, ${frustumMaxY.toFixed(2)}, 0),
+    Upper-Right Corner: (${frustumMaxX.toFixed(2)}, ${frustumMaxY.toFixed(2)}, 0),
+    Lower-Right Corner: (${frustumMaxX.toFixed(2)}, ${frustumMinY.toFixed(2)}, 0),
+    Lower-Left Corner: (${frustumMinX.toFixed(2)}, ${frustumMinY.toFixed(2)}, 0)`);
 
   const spriteManager = new BABYLON.SpriteManager('sprites', 'assets/sprites.png', 100, 64, scene);
   const entities = createEntities({ BABYLON, scene, spriteManager });
