@@ -10,7 +10,7 @@ export const createEntities = ({ BABYLON, scene, spriteManager }) => {
   };
 
   const obstacle = {
-    position: createPosition(500, 0), // Offset further for wide scrolling
+    position: createPosition(100, 0), // Offset further for wide scrolling
     renderable: createRenderable({ BABYLON, scene, spriteManager, type: 'square', size: 200 }),
   };
 

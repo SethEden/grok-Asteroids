@@ -10,13 +10,11 @@ export const createRenderable = ({ BABYLON, scene, spriteManager, type, size }) 
       break;
     case 'circle':
       renderObject = BABYLON.MeshBuilder.CreateDisc('circle', { radius: size / 2, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
-      renderObject.rotation.x = Math.PI / 2; // Face the camera in 2D
       renderObject.position.z = 0;
       logVertices(renderObject, 'custom');
       break;
     case 'square':
       renderObject = BABYLON.MeshBuilder.CreatePlane('square', { size, sideOrientation: BABYLON.Mesh.DOUBLESIDE },  scene);
-      renderObject.rotation.x = Math.PI / 2; // Face the camera in 2D
       renderObject.position.z = 0;
       logVertices(renderObject, 'custom');
       break;
@@ -35,6 +33,12 @@ export const createRenderable = ({ BABYLON, scene, spriteManager, type, size }) 
   material.diffuseColor = new BABYLON.Color3(0, 1, 0); // Bright green
   material.emissiveColor = new BABYLON.Color3(0, 1, 0); // Glow green
   renderObject.material = material;
+
+  if (renderObject.isVisible !== undefined) {
+    ipcRenderer.send('log', `Renderable ${type} visibility: ${renderObject.isVisible}`);
+  } else {
+    ipcRenderer.send('log', `Renderable ${type} no visibility property`);
+  }
 
   ipcRenderer.send('log', `Created renderable: ${type}, mesh: ${renderObject.name}`);
   return { renderObject };

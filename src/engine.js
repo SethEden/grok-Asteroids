@@ -10,20 +10,47 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
   const scene = new BABYLON.Scene(babylonEngine);
   scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
 
-  const camera = new BABYLON.FreeCamera('camera', new BABYLON.Vector3(0, 0, -500), scene);
-  camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
-  camera.setTarget(BABYLON.Vector3.Zero());
-
-  const totalWidth = displays.reduce((sum, d) => sum + d.bounds.width, 0);
-  const currentDisplay = displays.find(d => d.id === currentDisplayId);
-  const worldWidth = totalWidth;
+  // Sort displays by bounds.x
+  const sortedDisplays = [...displays].sort((a, b) => a.bounds.x - b.bounds.x);
+  const minX = Math.min(...sortedDisplays.map(d => d.bounds.x));
+  const currentDisplay = sortedDisplays.find(d => d.id === currentDisplayId);
+  const worldXOffset = currentDisplay.bounds.x - minX;
   const screenWidth = currentDisplay.bounds.width;
-  const offset = displays.filter(d => d.id < currentDisplayId).reduce((sum, d) => sum + d.bounds.width, 0);
-  camera.orthoLeft = offset - worldWidth / 2;
-  camera.orthoRight = offset + screenWidth - worldWidth / 2;
-  camera.orthoBottom = -currentDisplay.bounds.height / 2;
-  camera.orthoTop = currentDisplay.bounds.height / 2;
-  ipcRenderer.send('log', `Camera ${currentDisplayId}: ${camera.orthoLeft}, ${camera.orthoRight}, ${camera.orthoBottom}, ${camera.orthoTop}, pos: ${camera.position.x}, ${camera.position.y}, ${camera.position.z}`);
+  const screenHeight = currentDisplay.bounds.height;
+  const worldWidth = sortedDisplays.reduce((sum, d) => sum + d.bounds.width, 0);
+  const worldHeight = screenHeight; // Assuming uniform height for simplicity
+
+  // Use FreeCamera in perspective mode, facing negative Z, locked
+  const camera = new BABYLON.FreeCamera('camera', new BABYLON.Vector3(0, 0, -500), scene);
+  camera.minZ = 0.1;
+  camera.maxZ = 1000;
+  camera.attachControl(canvas, true);
+
+  camera.angularSensibility = 0;
+  camera.keysUp = [];
+  camera.keysDown = [];
+  camera.keysLeft = [];
+  camera.keysRight = [];
+
+  // Set FOV for 2D-like view (adjusted for screen width)
+  camera.fov = 1.74; // ≈ 100 degrees, calculated for screenWidth = 1920 units
+
+  // Position camera for this display
+  camera.position.x = worldXOffset + screenWidth / 2 - worldWidth / 2;
+  camera.position.y = 0;
+  // Calculate the target point along the negative Z-axis from the camera's position
+  const distance = -200; // Arbitrary positive distance; adjust based on your scene scale
+  const target = new BABYLON.Vector3(
+    camera.position.x,
+    camera.position.y,
+    camera.position.z - distance
+  );
+
+  // Set the target and lock it
+  camera.setTarget(target);
+  camera.lockedTarget = target;
+  ipcRenderer.send('log', `Camera Position: ${currentDisplayId}: pos: ${camera.position.x}, ${camera.position.y}, ${camera.position.z}, fov: ${camera.fov}`);
+  ipcRenderer.send('log', `Camera Target: ${currentDisplayId}: pos: ${target.x}, ${target.y}, ${target.z}`);
 
   const spriteManager = new BABYLON.SpriteManager('sprites', 'assets/sprites.png', 100, 64, scene);
   const entities = createEntities({ BABYLON, scene, spriteManager });
@@ -35,7 +62,7 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
     updateInput,
   ];
 
-  setupInput(entities, { canvas, displays, currentDisplayId }); // One-time setup
+  setupInput(entities, { canvas, displays: sortedDisplays, currentDisplayId }); // Pass sorted displays
   ipcRenderer.send('log', `Scene meshes: ${scene.meshes.length}, names: ${scene.meshes.map(m => m.name).join(', ')}`);
 
   let lastTime = performance.now();
@@ -45,9 +72,9 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
       const delta = (currentTime - lastTime) / 1000;
       lastTime = currentTime;
 
-      systems[0](entities, delta, { worldWidth, worldHeight: currentDisplay.bounds.height });
+      systems[0](entities, delta, { worldWidth, worldHeight });
       systems[1](entities);
-      systems[2](entities); // Empty for now
+      systems[2](entities);
       scene.render();
       ipcRenderer.send('log', `Rendering frame for display ${currentDisplayId}`);
     };
