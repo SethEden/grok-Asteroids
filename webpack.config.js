@@ -17,6 +17,10 @@ export default {
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'renderer.bundle.js',
+    module: true,
+  },
+  experiments: {
+    outputModule: true, // Enable ESM output
   },
   module: {
     rules: [

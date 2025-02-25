@@ -11,11 +11,12 @@ export const createEntities = ({ BABYLON, scene }) => {
       scene,
       type: 'lines',
       points: [
-        new BABYLON.Vector3(-5, 0, 0), // Small horizontal line as target
+        new BABYLON.Vector3(-5, 0, 0),
         new BABYLON.Vector3(5, 0, 0),
       ],
-      color: new BABYLON.Color3(1, 1, 1), // White
+      color: new BABYLON.Color3(1, 1, 1),
     }),
+    id: 'target',
   };
 
   const playerShip = {
@@ -26,14 +27,38 @@ export const createEntities = ({ BABYLON, scene }) => {
       scene,
       type: 'lines',
       points: [
-        new BABYLON.Vector3(0, 10, 0), // Nose
-        new BABYLON.Vector3(-5, -5, 0), // Left base
-        new BABYLON.Vector3(5, -5, 0), // Right base
-        new BABYLON.Vector3(0, 10, 0), // Close loop
+        new BABYLON.Vector3(0, 10, 0),
+        new BABYLON.Vector3(-5, -5, 0),
+        new BABYLON.Vector3(5, -5, 0),
+        new BABYLON.Vector3(0, 10, 0),
       ],
-      color: new BABYLON.Color3(1, 1, 1), // White
+      color: new BABYLON.Color3(1, 1, 1),
     }),
+    id: 'player',
   };
 
   return [target, playerShip];
+};
+
+export const createBullet = ({ BABYLON, scene, shipPosition, shipRotation }) => {
+  const bulletSpeed = 500;
+  const angle = shipRotation + Math.PI / 2;
+  const vx = Math.cos(angle) * bulletSpeed;
+  const vy = Math.sin(angle) * bulletSpeed;
+
+  return {
+    position: createPosition(shipPosition.x, shipPosition.y),
+    velocity: createVelocity(vx, vy),
+    renderable: createRenderable({
+      BABYLON,
+      scene,
+      type: 'lines',
+      points: [
+        new BABYLON.Vector3(0, 0, 0),
+        new BABYLON.Vector3(0, 5, 0),
+      ],
+      color: new BABYLON.Color3(1, 1, 1),
+    }),
+    lifetime: 2,
+  };
 };

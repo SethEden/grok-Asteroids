@@ -1,20 +1,21 @@
 // src/systems/input.js
-import { ipcRenderer } from 'electron';
+import { createBullet } from '../entities.js';
 
-export const setupInput = (entities, { canvas, displays, currentDisplayId }) => {
-  const updateTargetPosition = (x, y) => {
+export const setupInput = (entities, { displays }) => {
+  entities[0].id = 'target';
+  entities[1].id = 'player';
+
+  const updateTargetPosition = (x, y, displayId) => {
     const target = entities[0];
     const playerShip = entities[1];
     if (target && target.position && playerShip && playerShip.position) {
       const worldWidth = displays.reduce((sum, d) => sum + d.bounds.width, 0);
       const worldHeight = displays[0].bounds.height;
-      const screenWidth = canvas.width;
-      const screenHeight = canvas.height;
+      const currentDisplay = displays.find(d => d.id === displayId);
+      const screenWidth = currentDisplay.bounds.width;
+      const screenHeight = currentDisplay.bounds.height;
       const minX = Math.min(...displays.map(d => d.bounds.x));
-      const currentDisplay = displays.find(d => d.id === currentDisplayId);
-
-      const totalWidth = worldWidth;
-      const displayStartX = (currentDisplay.bounds.x - minX) - totalWidth / 2;
+      const displayStartX = (currentDisplay.bounds.x - minX) - worldWidth / 2;
 
       const worldX = displayStartX + x;
       const worldY = (screenHeight / 2) - y;
@@ -29,141 +30,98 @@ export const setupInput = (entities, { canvas, displays, currentDisplayId }) => 
     }
   };
 
-  const mainThrustSpeed = 200;
-  const sideThrustSpeed = mainThrustSpeed / 2;
+  const mainThrustAccel = 200;
+  const sideThrustAccel = mainThrustAccel / 2;
   const keysPressed = new Set();
-  let lastTargetSync = 0;
-  let lastPlayerSync = 0;
-  const syncInterval = 100; // Increase to 10 updates/sec
+  let lastFireTime = 0;
+  const fireRate = 200;
+  let bulletCounter = 0;
 
-  const updateVelocity = () => {
+  const applyThrust = (delta) => {
     const playerShip = entities[1];
-    if (!playerShip || !playerShip.velocity) return false; // Early exit if no ship
+    if (!playerShip || !playerShip.velocity) return false;
 
-    let vx = 0;
-    let vy = 0;
+    let ax = 0;
+    let ay = 0;
     const angle = playerShip.renderable.renderObject.rotation.z + Math.PI / 2;
 
     if (keysPressed.has('arrowup') || keysPressed.has('w')) {
-      vx += Math.cos(angle) * mainThrustSpeed;
-      vy += Math.sin(angle) * mainThrustSpeed;
+      ax += Math.cos(angle) * mainThrustAccel;
+      ay += Math.sin(angle) * mainThrustAccel;
     }
     if (keysPressed.has('arrowdown') || keysPressed.has('s')) {
-      vx -= Math.cos(angle) * sideThrustSpeed;
-      vy -= Math.sin(angle) * sideThrustSpeed;
+      ax -= Math.cos(angle) * sideThrustAccel;
+      ay -= Math.sin(angle) * sideThrustAccel;
     }
     if (keysPressed.has('arrowleft') || keysPressed.has('a')) {
-      vx -= Math.cos(angle + Math.PI / 2) * sideThrustSpeed;
-      vy -= Math.sin(angle + Math.PI / 2) * sideThrustSpeed;
+      ax -= Math.cos(angle + Math.PI / 2) * sideThrustAccel;
+      ay -= Math.sin(angle + Math.PI / 2) * sideThrustAccel;
     }
     if (keysPressed.has('arrowright') || keysPressed.has('d')) {
-      vx += Math.cos(angle + Math.PI / 2) * sideThrustSpeed;
-      vy += Math.sin(angle + Math.PI / 2) * sideThrustSpeed;
+      ax += Math.cos(angle + Math.PI / 2) * sideThrustAccel;
+      ay += Math.sin(angle + Math.PI / 2) * sideThrustAccel;
     }
 
-    const velocityChanged = playerShip.velocity.vx !== vx || playerShip.velocity.vy !== vy;
-    playerShip.velocity.vx = vx;
-    playerShip.velocity.vy = vy;
+    playerShip.velocity.vx += ax * delta;
+    playerShip.velocity.vy += ay * delta;
 
+    return ax !== 0 || ay !== 0;
+  };
+
+  const fireBullet = () => {
+    const playerShip = entities[1];
     const now = Date.now();
-    if (velocityChanged && (vx !== 0 || vy !== 0) && now - lastPlayerSync > syncInterval) {
-      ipcRenderer.send('update-player-position', { x: playerShip.position.x, y: playerShip.position.y });
-      lastPlayerSync = now;
-    }
-
-    return velocityChanged; // Indicate if work was done
-  };
-
-  const throttleTargetSync = () => {
-    const target = entities[0];
-    if (target && target.position) {
-      const now = Date.now();
-      if (now - lastTargetSync > syncInterval) {
-        ipcRenderer.send('sync-target-position', { x: target.position.x, y: target.position.y });
-        lastTargetSync = now;
-      }
+    if (keysPressed.has(' ') && now - lastFireTime > fireRate) {
+      const bullet = createBullet({
+        BABYLON,
+        scene,
+        shipPosition: { x: playerShip.position.x, y: playerShip.position.y },
+        shipRotation: playerShip.renderable.renderObject.rotation.z,
+      });
+      bullet.id = `bullet_${bulletCounter++}`;
+      entities.push(bullet);
+      lastFireTime = now;
+      window.electronAPI.ipcRenderer.send('log', `Bullet fired: id=${bullet.id}, x=${bullet.position.x}, y=${bullet.position.y}, entities=${entities.length}`);
     }
   };
 
-  canvas.addEventListener('mousemove', (event) => {
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-    updateTargetPosition(mouseX, mouseY);
-    throttleTargetSync();
-  });
+  const initialize = () => {
+    let lastTime = performance.now();
+    const updateLoop = () => {
+      const now = performance.now();
+      const delta = (now - lastTime) / 1000;
+      lastTime = now;
 
-  canvas.addEventListener('click', () => {
-    const playerShip = entities[1];
-    if (playerShip && playerShip.position) {
-      ipcRenderer.send('log', `Clicked at ${playerShip.position.x}, ${playerShip.position.y}`);
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    const key = event.key.toLowerCase();
-    if (!keysPressed.has(key)) {
-      keysPressed.add(key);
-      ipcRenderer.send('keydown', key);
-    }
-  });
-
-  document.addEventListener('keyup', (event) => {
-    const key = event.key.toLowerCase();
-    keysPressed.delete(key);
-    ipcRenderer.send('keyup', key);
-  });
-
-  ipcRenderer.on('broadcast-keydown', (event, key) => {
-    keysPressed.add(key);
-    ipcRenderer.send('log', `Key down: ${key}`);
-  });
-
-  ipcRenderer.on('broadcast-keyup', (event, key) => {
-    keysPressed.delete(key);
-    ipcRenderer.send('log', `Key up: ${key}`);
-  });
-
-  ipcRenderer.on('sync-player-position', (event, pos) => {
-    const playerShip = entities[1];
-    if (playerShip && playerShip.position) {
-      playerShip.position.x = pos.x;
-      playerShip.position.y = pos.y;
-      const target = entities[0];
-      if (target && target.position) {
-        const dx = target.position.x - playerShip.position.x;
-        const dy = target.position.y - playerShip.position.y;
-        const angle = Math.atan2(dy, dx);
-        playerShip.renderable.renderObject.rotation.z = angle - Math.PI / 2;
+      const didThrust = applyThrust(delta);
+      fireBullet();
+      if (didThrust) {
+        window.electronAPI.ipcRenderer.send('log', `Thrust: vx=${entities[1].velocity.vx}, vy=${entities[1].velocity.vy}`);
       }
-    }
-  });
 
-  ipcRenderer.on('sync-target-position', (event, pos) => {
-    const target = entities[0];
-    const playerShip = entities[1];
-    if (target && target.position) {
-      target.position.x = pos.x;
-      target.position.y = pos.y;
-    }
-    if (playerShip && playerShip.position) {
-      const dx = pos.x - playerShip.position.x;
-      const dy = pos.y - playerShip.position.y;
-      const angle = Math.atan2(dy, dx);
-      playerShip.renderable.renderObject.rotation.z = angle - Math.PI / 2;
-    }
-  });
-
-  // Optimized update loop
-  const updateLoop = () => {
-    const didWork = updateVelocity();
-    if (didWork) {
-      // Only log if velocity changed
-      ipcRenderer.send('log', `Velocity applied: vx=${entities[1].velocity.vx}, vy=${entities[1].velocity.vy}`);
-    }
+      requestAnimationFrame(updateLoop);
+    };
     requestAnimationFrame(updateLoop);
   };
-  updateLoop();
+
+  window.electronAPI.ipcRenderer.on('mousemove', (event, { x, y, displayId }) => {
+    updateTargetPosition(x, y, displayId);
+  });
+
+  window.electronAPI.ipcRenderer.on('broadcast-keydown', (event, key) => {
+    if (key) {
+      keysPressed.add(key);
+      window.electronAPI.ipcRenderer.send('log', `Broadcast key down: "${key}"`);
+    }
+  });
+
+  window.electronAPI.ipcRenderer.on('broadcast-keyup', (event, key) => {
+    if (key) {
+      keysPressed.delete(key);
+      window.electronAPI.ipcRenderer.send('log', `Broadcast key up: "${key}"`);
+    }
+  });
+
+  return { initialize, updateTargetPosition };
 };
 
 export const updateInput = () => {};

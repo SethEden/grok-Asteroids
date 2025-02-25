@@ -1,10 +1,29 @@
+<!-- public/main.html -->
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Grok GameBB Control</title>
-  </head>
-  <body>
-    <div id="app">Control Bar</div>
-    <script type="module" src="/src/main-renderer.js"></script>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Control Window</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <canvas id="renderCanvas"></canvas>
+  <script>
+    window.global = window; // Pre-bundle polyfill
+  </script>
+  <script src="../dist/renderer.bundle.js"></script>
+</body>
 </html>

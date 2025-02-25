@@ -1,24 +1,30 @@
+<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <title>Game Window</title>
   <style>
-    body,
-    html {
+    body, html {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
     }
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+    }
   </style>
 </head>
-
 <body>
   <div id="app"></div>
+  <canvas id="renderCanvas"></canvas>
+  <script>
+    // Polyfill global before bundle loads
+    window.global = window;
+  </script>
   <script src="../dist/renderer.bundle.js"></script>
 </body>
-
 </html>
