@@ -1,18 +1,39 @@
+// src/entities.js
 import { createPosition } from './components/position.js';
 import { createVelocity } from './components/velocity.js';
 import { createRenderable } from './components/renderable.js';
 
-export const createEntities = ({ BABYLON, scene, spriteManager }) => {
-  const player = {
+export const createEntities = ({ BABYLON, scene }) => {
+  const target = {
     position: createPosition(0, 0),
-    velocity: createVelocity(0, 0), // Stationary, we’ll add mouse control later
-    renderable: createRenderable({ BABYLON, scene, spriteManager, type: 'sprite', size: 64 }),
+    renderable: createRenderable({
+      BABYLON,
+      scene,
+      type: 'lines',
+      points: [
+        new BABYLON.Vector3(-5, 0, 0), // Small horizontal line as target
+        new BABYLON.Vector3(5, 0, 0),
+      ],
+      color: new BABYLON.Color3(1, 1, 1), // White
+    }),
   };
 
-  const obstacle = {
-    position: createPosition(100, 0), // Offset further for wide scrolling
-    renderable: createRenderable({ BABYLON, scene, spriteManager, type: 'square', size: 200 }),
+  const playerShip = {
+    position: createPosition(0, 0),
+    velocity: createVelocity(0, 0),
+    renderable: createRenderable({
+      BABYLON,
+      scene,
+      type: 'lines',
+      points: [
+        new BABYLON.Vector3(0, 10, 0), // Nose
+        new BABYLON.Vector3(-5, -5, 0), // Left base
+        new BABYLON.Vector3(5, -5, 0), // Right base
+        new BABYLON.Vector3(0, 10, 0), // Close loop
+      ],
+      color: new BABYLON.Color3(1, 1, 1), // White
+    }),
   };
 
-  return [player, obstacle];
+  return [target, playerShip];
 };

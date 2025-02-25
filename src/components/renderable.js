@@ -1,37 +1,42 @@
+// src/components/renderable.js
 import { ipcRenderer } from 'electron';
 
-export const createRenderable = ({ BABYLON, scene, spriteManager, type, size }) => {
+export const createRenderable = ({ BABYLON, scene, type, size, points, color }) => {
   let renderObject;
 
   switch (type) {
     case 'sprite':
-      renderObject = new BABYLON.Sprite('sprite', spriteManager);
-      renderObject.size = size; // Width/height of sprite
-      break;
+      // Sprite case removed since we don’t use spriteManager anymore
+      throw new Error('Sprite type no longer supported');
     case 'circle':
       renderObject = BABYLON.MeshBuilder.CreateDisc('circle', { radius: size / 2, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
       renderObject.position.z = 0;
-      logVertices(renderObject, 'custom');
+      logVertices(renderObject, 'circle');
       break;
     case 'square':
-      renderObject = BABYLON.MeshBuilder.CreatePlane('square', { size, sideOrientation: BABYLON.Mesh.DOUBLESIDE },  scene);
+      renderObject = BABYLON.MeshBuilder.CreatePlane('square', { size, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
+      renderObject.position.z = 0;
+      logVertices(renderObject, 'square');
+      break;
+    case 'lines':
+      renderObject = BABYLON.MeshBuilder.CreateLines('lines', { points }, scene);
+      renderObject.position.z = 0;
+      logVertices(renderObject, 'lines');
+      break;
+    case 'custom':
+      renderObject = points; // Assuming points is a pre-built mesh for 'custom'
       renderObject.position.z = 0;
       logVertices(renderObject, 'custom');
       break;
-    case 'custom':
-        renderObject = customMesh;
-        renderObject.position.z = 0;
-        logVertices(renderObject, 'custom');
-        break;
     default:
-      // Fallback to sprite if type is unrecognized
-      renderObject = new BABYLON.Sprite('default', spriteManager);
-      renderObject.size = size;
+      throw new Error(`Unknown renderable type: ${type}`);
   }
 
   const material = new BABYLON.StandardMaterial('mat', scene);
-  material.diffuseColor = new BABYLON.Color3(0, 1, 0); // Bright green
-  material.emissiveColor = new BABYLON.Color3(0, 1, 0); // Glow green
+  // Use provided color or default to white for Asteroids vibe
+  const finalColor = color || new BABYLON.Color3(1, 1, 1); // White
+  material.diffuseColor = finalColor;
+  material.emissiveColor = finalColor;
   renderObject.material = material;
 
   if (renderObject.isVisible !== undefined) {

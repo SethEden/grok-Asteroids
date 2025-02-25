@@ -6,4 +6,5 @@ export const updateRendering = ({ BABYLON, scene, camera, canvas }) => (entities
       renderObject.position.y = entity.position.y;
     }
   });
+  scene.render();
 };

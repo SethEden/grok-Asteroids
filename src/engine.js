@@ -78,8 +78,7 @@ export const engine = ({ BABYLON, canvas, displays, currentDisplayId }) => {
     Lower-Right Corner: (${frustumMaxX.toFixed(2)}, ${frustumMinY.toFixed(2)}, 0),
     Lower-Left Corner: (${frustumMinX.toFixed(2)}, ${frustumMinY.toFixed(2)}, 0)`);
 
-  const spriteManager = new BABYLON.SpriteManager('sprites', 'assets/sprites.png', 100, 64, scene);
-  const entities = createEntities({ BABYLON, scene, spriteManager });
+  const entities = createEntities({ BABYLON, scene });
   setEntities(entities);
 
   const systems = [
