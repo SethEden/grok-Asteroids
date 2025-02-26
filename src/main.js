@@ -1,5 +1,5 @@
 // src/main.js
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import { fileURLToPath } from 'url';
 import path from 'path';
 // import * as engineModule from './engine.js'; // Direct import
@@ -138,10 +138,10 @@ const createGameWindows = async () => {
       });
     });
 
-    ipcMain.on('canvas-ready', (event, { displayId, bounds }) => {
-      if (controlWindow && !controlWindow.isDestroyed() && bounds) {
+    ipcMain.on('canvas-ready', (event, { displayId }) => {
+      if (controlWindow && !controlWindow.isDestroyed()) {
         console.log(`Main: Sending add-canvas for display ${displayId}`);
-        controlWindow.webContents.send('add-canvas', { displayId, bounds });
+        controlWindow.webContents.send('add-canvas', { displayId });
       } else {
         console.log('Main: Control window not available for add-canvas');
       }
@@ -195,6 +195,14 @@ app.whenReady().then(async () => {
     console.error('App startup failed:', err);
     process.exit(1);
   });
+});
+
+ipcMain.on('engine-ready', () => {
+  console.log('Main: Engine is ready, sending real displays');
+  const displays = screen.getAllDisplays();
+  const displayData = displays.map(d => ({ id: d.id, bounds: d.bounds }));
+    console.log('Main: Sending update-displays with', displayData.length, 'displays');
+    controlWindow.webContents.send('update-displays', { displays: displayData });
 });
 
 app.on('activate', async () => {

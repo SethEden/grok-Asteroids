@@ -68,6 +68,25 @@ export const engine = async (canvas, displays) => {
   dummyCamera.viewport = new BABYLON.Viewport(0, 0, 1, 1);
   scene.activeCameras.push(dummyCamera);
 
+  // Signal that the engine is ready
+  window.electronAPI.ipcRenderer.send('engine-ready');
+
+  // Add the updateDisplays function
+  const updateDisplays = (realDisplays) => {
+    console.log('Engine: Updating displays with real data:', realDisplays.length);
+    window.electronAPI.ipcRenderer.send('log', `Engine: Updating with ${realDisplays.length} displays`);
+    // Clear dummy camera
+    scene.activeCameras = [];
+    // Configure real displays
+    realDisplays.forEach((display) => {
+      const camera = new BABYLON.FreeCamera(`camera_${display.id}`, new BABYLON.Vector3(0, 0, -500), scene);
+      camera.setTarget(new BABYLON.Vector3(0, 0, -300));
+      camera.viewport = new BABYLON.Viewport(0, 0, 1, 1); // Adjust viewport as needed
+      scene.activeCameras.push(camera);
+      // Add your multi-monitor logic here if needed
+    });
+  };
+
   console.log('Engine: Starting render loop');
   window.electronAPI.ipcRenderer.send('log', 'Engine: Starting render loop');
   let lastTime = performance.now();
@@ -116,5 +135,5 @@ export const engine = async (canvas, displays) => {
     stopEngine();
   };
 
-  return { stopEngine, scene, babylonEngine };
+  return { stopEngine, scene, babylonEngine, updateDisplays };
 };

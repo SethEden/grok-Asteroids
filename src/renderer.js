@@ -37,14 +37,17 @@ try {
     window.displayId = currentDisplayId;
     console.log(`Renderer: Received display-info for ${currentDisplayId}, displays: ${displays ? displays.length : 'undefined'}`);
     window.electronAPI.ipcRenderer.send('log', `Renderer: Received display-info for ${currentDisplayId}, displays: ${displays.length}`);
+    window.electronAPI.ipcRenderer.send('log', `Renderer: Sending canvas-ready for display ${currentDisplayId}`);
+    window.electronAPI.ipcRenderer.send('canvas-ready', { displayId: currentDisplayId });
     if (!displays || !Array.isArray(displays)) {
       console.error('Renderer: Displays invalid in display-info:', displays);
       return;
     }
-    const display = displays.find(d => d.id === currentDisplayId);
-    const bounds = display && display.bounds ? display.bounds : { x: 0, y: 0, width: screenWidth, height: screenHeight };
-    window.electronAPI.ipcRenderer.send('log', `Renderer: Sending canvas-ready for display ${currentDisplayId}`);
-    window.electronAPI.ipcRenderer.send('canvas-ready', { displayId: currentDisplayId, bounds });
+    console.log('Renderer: Displays received:', displays);
+    // const display = displays.find(d => d.id === currentDisplayId);
+    // const bounds = display && display.bounds ? display.bounds : { x: 0, y: 0, width: screenWidth, height: screenHeight };
+    // console.log('Renderer: Using bounds:', bounds);
+    // Optionally keep bounds locally if needed later
 
     window.electronAPI.ipcRenderer.on('canvas-added', () => {
       window.electronAPI.ipcRenderer.send('log', `Renderer: Canvas added for display ${currentDisplayId}`);
@@ -53,6 +56,32 @@ try {
     window.electronAPI.ipcRenderer.on('render-frame', (event, entityData) => {
       window.electronAPI.ipcRenderer.send('log', `Renderer: Render frame received for display ${currentDisplayId}, entities: ${entityData.length}`);
     });
+  });
+
+  window.electronAPI.ipcRenderer.on('update-displays', (event, { displays }) => {
+    console.log('Renderer: Received update-displays with:', displays.length);
+    window.electronAPI.ipcRenderer.send('log', `Renderer: Received ${displays.length} displays`);
+    if (!Array.isArray(displays) || displays.length === 0) {
+      console.error('Renderer: No valid displays received');
+      return;
+    }
+    if (engineInstance && engineInstance.updateDisplays) {
+      engineInstance.updateDisplays(displays);
+    } else {
+      console.error('Renderer: Engine instance not ready for display update');
+    }
+  });
+
+  window.electronAPI.ipcRenderer.on('message', (event, data) => {
+    console.log('Renderer: Caught unexpected IPC message:', event.type, data);
+    try {
+      // Force an error if bounds is accessed here
+      if (data && data.bounds) {
+        console.log('Renderer: Bounds accessed safely:', data.bounds);
+      }
+    } catch (err) {
+      console.error('Renderer: Error in catch-all handler:', err);
+    }
   });
 
   canvas.addEventListener('mousemove', (event) => {
