@@ -69,3 +69,22 @@ export const createAsteroid = (name, size, position, scene) => {
 
   return asteroid;
 };
+
+export const createLifeIcon = (name, size, position, scene) => {
+  const points = [
+    new Vector3(0, size, 0),
+    new Vector3(-size / 2, -size / 2, 0),
+    new Vector3(size / 2, -size / 2, 0),
+    new Vector3(0, size, 0)
+  ];
+  const icon = MeshBuilder.CreateLines(name, { points, updatable: true }, scene);
+  icon.position = position;
+  icon.rotation = new Vector3(0, 0, 0);
+  console.log('Life icon created:', { name, position });
+
+  const material = new StandardMaterial(`${name}-material`, scene);
+  material.emissiveColor = new Color3(1, 1, 1);
+  icon.material = material;
+
+  return icon;
+};

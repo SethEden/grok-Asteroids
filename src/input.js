@@ -1,6 +1,6 @@
 import { Vector3 } from '../node_modules/@babylonjs/core/Maths/math.vector.js';
-import { createBullet } from './meshUtils.js';
 import { Color3 } from '../node_modules/@babylonjs/core/Maths/math.color.js';
+import { createBullet } from './meshUtils.js';
 
 export const setupInput = (canvas, gameObjects) => {
   const cameraHeight = 500;

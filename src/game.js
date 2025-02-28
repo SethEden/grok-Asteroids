@@ -1,7 +1,7 @@
 import { Vector3 } from '../node_modules/@babylonjs/core/Maths/math.vector.js';
 import { FreeCamera } from '../node_modules/@babylonjs/core/Cameras/freeCamera.js';
 import { Color3 } from '../node_modules/@babylonjs/core/Maths/math.color.js';
-import { createUnlitTriangle, createAsteroid } from './meshUtils.js';
+import { createUnlitTriangle, createAsteroid, createLifeIcon } from './meshUtils.js';
 
 export const setupGame = (scene, canvas) => {
   // Camera setup
@@ -27,7 +27,8 @@ export const setupGame = (scene, canvas) => {
     bulletSpeed: 5,
     asteroids: [],
     lives: 3,
-    isAlive: true
+    isAlive: true,
+    lifeIcons: []
   };
 
   // Calculate world dimensions (helper functions)
@@ -43,6 +44,76 @@ export const setupGame = (scene, canvas) => {
     const asteroid = createAsteroid(`asteroid_${i}`, size, new Vector3(x, y, 0), scene);
     shipState.asteroids.push(asteroid);
   }
+
+  // Setup lives display in world space
+  const updateLivesDisplay = () => {
+    shipState.lifeIcons.forEach(icon => {
+      scene.removeMesh(icon);
+      icon.dispose();
+    });
+    shipState.lifeIcons = [];
+
+    const halfWidth = worldWidth() / 2;
+    const halfHeight = worldHeight() / 2;
+    for (let i = 0; i < shipState.lives; i++) {
+      const iconX = halfWidth - 5 - i * 3; // Tighter spacing (5 units apart), stays left
+      const iconY = halfHeight - 5; // Same top offset
+      const icon = createLifeIcon(`life_${i}`, 1, new Vector3(iconX, iconY, 0), scene); // Size 1 for tighter fit
+      shipState.lifeIcons.push(icon);
+    }
+    console.log('Lives display updated:', shipState.lives);
+  };
+  updateLivesDisplay();
+
+  // Setup game over display with mesh lines
+  const createGameOverText = (baseX, baseY) => {
+    const letterSize = 5; // Height of each letter
+    const spacing = 2; // Space between letters
+    const letters = [
+      // G
+      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, letterSize / 2], [letterSize / 2, letterSize / 2], [letterSize / 2, 0], [0, 0]],
+      // A
+      [[0, 0], [letterSize / 2, letterSize], [letterSize, 0], [letterSize * 0.75, letterSize / 2], [letterSize * 0.25, letterSize / 2], [0, 0]],
+      // M
+      [[0, 0], [0, letterSize], [letterSize / 2, letterSize / 2], [letterSize, letterSize], [letterSize, 0], [letterSize * 0.75, letterSize / 2], [letterSize * 0.25, letterSize / 2]],
+      // E
+      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, letterSize * 0.75], [letterSize / 2, letterSize * 0.75], [letterSize / 2, letterSize * 0.25], [letterSize, letterSize * 0.25], [letterSize, 0], [0, 0]],
+      // [space]
+      [],
+      // O
+      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, 0], [0, 0]],
+      // V
+      [[0, letterSize], [letterSize / 2, 0], [letterSize, letterSize], [letterSize * 0.75, letterSize * 0.25], [letterSize * 0.25, letterSize * 0.25]],
+      // E
+      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, letterSize * 0.75], [letterSize / 2, letterSize * 0.75], [letterSize / 2, letterSize * 0.25], [letterSize, letterSize * 0.25], [letterSize, 0], [0, 0]],
+      // R
+      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, letterSize / 2], [0, letterSize / 2], [letterSize, 0]]
+    ];
+
+    const meshes = [];
+    let currentX = baseX;
+    letters.forEach((letterPoints, index) => {
+      if (letterPoints.length > 0) {
+        const points = letterPoints.map(([x, y]) => new Vector3(currentX + x, baseY + y, 0));
+        const mesh = MeshBuilder.CreateLines(`gameOverLetter_${index}`, { points }, scene);
+        mesh.color = new Color3(1, 1, 1); // White lines
+        meshes.push(mesh);
+      }
+      currentX += letterSize + spacing; // Move to next letter position
+    });
+
+    return meshes;
+  };
+
+  const updateGameOverDisplay = () => {
+    if (shipState.lives <= 0 && shipState.gameOverMeshes.length === 0) {
+      const totalWidth = 9 * 5 + 8 * 2; // 9 letters * 5 width + 8 spaces * 2
+      const baseX = -totalWidth / 2; // Center horizontally
+      const baseY = 0; // Center vertically
+      shipState.gameOverMeshes = createGameOverText(baseX, baseY);
+      console.log('Game over displayed');
+    }
+  };
 
   // Physics update loop
   const updatePhysics = () => {
@@ -146,6 +217,8 @@ export const setupGame = (scene, canvas) => {
           shipState.isAlive = false;
           shipState.lives -= 1;
           scene.removeMesh(ship);
+          updateLivesDisplay();
+          updateGameOverDisplay();
           console.log('Ship hit by asteroid! Lives remaining:', shipState.lives);
         }
       });
