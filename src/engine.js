@@ -7,7 +7,7 @@ export const initializeEngine = (canvas) => {
   console.log('Engine initialized:', engine);
 
   const scene = new Scene(engine);
-  scene.clearColor = new Color3(0.2, 0.4, 0.6); // Light blue background
+  scene.clearColor = new Color3(0, 0, 0); // black background
   console.log('Scene created:', scene);
 
   const renderLoop = () => {

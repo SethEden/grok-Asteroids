@@ -11,5 +11,5 @@ if (!canvas) {
 }
 
 const { engine, scene } = initializeEngine(canvas);
-const gameObjects = setupGame(scene);
-setupInput(canvas, gameObjects);
+const gameObjects = setupGame(scene, canvas);
+setupInput(canvas, { ...gameObjects, scene });
