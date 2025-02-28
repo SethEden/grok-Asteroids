@@ -1,0 +1,18 @@
+{
+  "name": "grok-asteroids",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "A native BabylonJS game, multi-monitor asterids classic arcade game remake.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Seth Hollingsead",
+  "license": "MIT",
+  "dependencies": {
+    "@babylonjs/core": "^7.51.1",
+    "babylonjs": "^7.51.1",
+    "electron": "^31.7.7",
+    "vue": "^3.5.13"
+  }
+}
