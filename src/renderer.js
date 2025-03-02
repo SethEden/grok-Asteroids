@@ -11,9 +11,9 @@ if (!canvas) {
 }
 
 const { engine, scene } = initializeEngine(canvas);
-const { shipState } = setupGame(scene, canvas);
+const { shipState, togglePause } = setupGame(scene, canvas);
 console.log('renderer.js: shipState received:', { 
   shipStateExists: !!shipState, 
   playerShipExists: !!shipState?.shipState?.playerShip 
 });
-setupInput(canvas, { shipState, scene });
+setupInput(canvas, { shipState, scene, togglePause });

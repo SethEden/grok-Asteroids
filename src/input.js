@@ -16,11 +16,13 @@ export const setupInput = (canvas, gameObjects) => {
   const worldWidth = worldHeight * (canvasWidth / canvasHeight);
 
   // Key state
-  const keys = { e: false, s: false, d: false, f: false, w: false, space: false };
+  const keys = { e: false, s: false, d: false, f: false, w: false, space: false, p: false };
   let slowStopActive = false;
 
   // Rotate ship to face mouse
   const updateShipRotation = (event) => {
+    if (gameObjects.shipState.isPaused) return; // Skip rotation if paused
+    
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
@@ -97,8 +99,11 @@ export const setupInput = (canvas, gameObjects) => {
         break;
       case ' ': keys.space = true; break;
       case 'p': 
+        if (!keys.p) { // Prevent repeated toggling while held
+          gameObjects.togglePause(); // Call togglePause directly from gameObjects
+          console.log('Pause toggled');
+        }
         keys.p = true;
-        gameObjects.togglePause(); // Call the togglePause function from game.js
         break;
     }
   });

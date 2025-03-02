@@ -61,11 +61,18 @@ export const createAsteroid = (name, size, position, scene) => {
   material.emissiveColor = new Color3(0.8, 0.8, 0.8);
   asteroid.material = material;
 
-  // Add velocity and size category
   const speed = 0.5 + Math.random() * 0.5;
   const direction = Math.random() * 2 * Math.PI;
   asteroid.velocity = new Vector3(Math.cos(direction) * speed, Math.sin(direction) * speed, 0);
-  asteroid.sizeCategory = size > 7.5 ? 'large' : size > 4 ? 'medium' : 'small'; // Large: >7.5, Medium: 4–7.5, Small: <4
+
+  asteroid.sizeCategory = size > 12 ? 'extraLarge' : size > 9 ? 'large' : size > 6 ? 'medium' : size > 3 ? 'small' : 'tiny';
+  asteroid.size = size;
+
+  // Assign mass based on size category (simple tiered scale)
+  asteroid.mass = asteroid.sizeCategory === 'extraLarge' ? 5 :
+                  asteroid.sizeCategory === 'large' ? 4 :
+                  asteroid.sizeCategory === 'medium' ? 3 :
+                  asteroid.sizeCategory === 'small' ? 2 : 1;
 
   return asteroid;
 };
@@ -101,7 +108,7 @@ export const createLetterMesh = (letter, name, baseX, baseY, scene) => {
     'F': [[5, 0], [5, 5], [0, 5], [5, 2.5], [1, 2.5]],
     'G': [[2.5, 2.5], [0, 2.5], [0, 0], [5, 0], [5, 5], [0, 5]],
     'H': [[5, 0], [5, 5], [0, 5], [0, 0], [5, 2.5], [0, 2.5]],
-    'I': [[2.5, 0], [2.5, 5], [5, 0], [0, 0], [5, 5], [0, 5]],
+    'I': [[5, 0], [0, 0], [2.5, 0], [2.5, 5], [0, 5], [5, 5]],
     'J': [[0, 0], [0, 5], [5, 5], [4, 4], [4, 0]],
     'K': [[5, 0], [5, 5], [0, 5], [5, 2.5], [0, 0]],
     'L': [[5, 5], [5, 0], [0, 0]],
@@ -111,7 +118,7 @@ export const createLetterMesh = (letter, name, baseX, baseY, scene) => {
     'P': [[5, 0], [5, 5], [0, 5], [0, 2.5], [5, 2.5]],
     'Q': [[5, 0], [5, 5], [0, 5], [0, 0], [5, 0], [2.5, 2.5], [0, 0]],
     'R': [[5, 0], [5, 5], [0, 5], [0, 2.5], [5, 2.5], [2.5, 2.5], [0, 0]],
-    'S': [[0, 0], [5, 0], [5, 2.5], [0, 2.5], [0, 5], [5, 5]],
+    'S': [[5, 0], [0, 0], [0, 2.5], [5, 2.5], [5, 5], [0, 5]],
     'T': [[5, 5], [0, 5], [2.5, 5], [2.5, 0]],
     'U': [[5, 5], [5, 0], [0, 0], [0, 5]],
     'V': [[5, 5], [2.5, 0], [0, 5]],
@@ -170,38 +177,76 @@ export const createLetterMesh = (letter, name, baseX, baseY, scene) => {
 
 export const createShipFragments = (position, scene) => {
   const fragments = [];
-  
-  // Fragment 1: Top to left
-  const fragment1 = MeshBuilder.CreateLines('fragment1', { 
-    points: [new Vector3(0, 1, 0), new Vector3(-0.5, -0.5, 0)] 
-  }, scene);
-  fragment1.position = position.clone();
-  fragment1.color = new Color3(1, 1, 1);
-  fragment1.velocity = new Vector3(-0.2, 0.2, 0);
-  fragment1.rotationVelocity = (Math.random() - 0.5) * 0.1; // Random spin ±0.05 rad/frame
-  fragment1.lifetime = 60;
+  const segmentCount = 10; // Minimum number of segments
+  // Configurable cap-limits
+  const minVelocity = 0.001; // Minimum speed (units/frame)
+  const maxVelocity = .8; // Maximum speed (units/frame)
+  const minRotationSpeed = 0.02; // Minimum rotation (rad/frame)
+  const maxRotationSpeed = 0.4; // Maximum rotation (rad/frame)
+  const baseLength = 1.0; // Base length of segments, can vary slightly
 
-  // Fragment 2: Left to bottom
-  const fragment2 = MeshBuilder.CreateLines('fragment2', { 
-    points: [new Vector3(-0.5, -0.5, 0), new Vector3(0.5, -0.5, 0)] 
-  }, scene);
-  fragment2.position = position.clone();
-  fragment2.color = new Color3(1, 1, 1);
-  fragment2.velocity = new Vector3(0, -0.3, 0);
-  fragment2.rotationVelocity = (Math.random() - 0.5) * 0.1;
-  fragment2.lifetime = 60;
+  for (let i = 0; i < segmentCount; i++) {
+    // Randomize segment length (0.5x to 1.5x baseLength)
+    const length = baseLength * (0.5 + Math.random());
 
-  // Fragment 3: Bottom to top
-  const fragment3 = MeshBuilder.CreateLines('fragment3', { 
-    points: [new Vector3(0.5, -0.5, 0), new Vector3(0, 1, 0)] 
-  }, scene);
-  fragment3.position = position.clone();
-  fragment3.color = new Color3(1, 1, 1);
-  fragment3.velocity = new Vector3(0.2, 0.2, 0);
-  fragment3.rotationVelocity = (Math.random() - 0.5) * 0.1;
-  fragment3.lifetime = 60;
+    // Random start and end points for variety
+    const angleOffset = Math.random() * 2 * Math.PI;
+    const startX = Math.cos(angleOffset) * (Math.random() * 0.5); // Small offset from center
+    const startY = Math.sin(angleOffset) * (Math.random() * 0.5);
+    const endX = startX + Math.cos(angleOffset) * length;
+    const endY = startY + Math.sin(angleOffset) * length;
 
-  fragments.push(fragment1, fragment2, fragment3);
-  console.log('Ship fragments created at:', position);
+    const points = [
+      new Vector3(startX, startY, 0),
+      new Vector3(endX, endY, 0)
+    ];
+
+    const fragment = MeshBuilder.CreateLines(`fragment${i}`, { points }, scene);
+    fragment.position = position.clone();
+    fragment.color = new Color3(1, 1, 1);
+
+    // Random velocity: direction (360°) and magnitude (minVelocity to maxVelocity)
+    const direction = Math.random() * 2 * Math.PI;
+    const speed = minVelocity + Math.random() * (maxVelocity - minVelocity);
+    fragment.velocity = new Vector3(
+      Math.cos(direction) * speed,
+      Math.sin(direction) * speed,
+      0
+    );
+
+    // Random rotation speed (minRotationSpeed to maxRotationSpeed), positive or negative
+    fragment.rotationVelocity = minRotationSpeed + Math.random() * (maxRotationSpeed - minRotationSpeed);
+    fragment.rotationVelocity *= Math.random() < 0.5 ? 1 : -1; // Random direction (clockwise or counterclockwise)
+
+    fragment.lifetime = 60; // Same as before, can be adjusted if needed
+
+    fragments.push(fragment);
+    console.log(`Fragment ${i} created:`, {
+      position: fragment.position,
+      velocity: fragment.velocity,
+      rotationVelocity: fragment.rotationVelocity,
+      length
+    });
+  }
+
+  console.log('Ship fragments created at:', position, `Count: ${fragments.length}`);
   return fragments;
+};
+
+export const createShield = (name, position, scene) => {
+  const points = [];
+  const segments = 32;
+  const radius = 2; // Shield radius around ship
+  for (let i = 0; i <= segments; i++) {
+    const angle = (i / segments) * 2 * Math.PI;
+    points.push(new Vector3(radius * Math.cos(angle), radius * Math.sin(angle), 0));
+  }
+  const shield = MeshBuilder.CreateLines(name, { points }, scene);
+  const material = new StandardMaterial(`${name}-material`, scene);
+  material.emissiveColor = new Color3(1, 1, 1); // White shield
+  shield.material = material;
+  shield.position = position;
+  shield.isVisible = false; // Hidden until activated
+  console.log('Shield created:', { name, position });
+  return shield;
 };
