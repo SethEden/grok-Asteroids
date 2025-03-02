@@ -88,3 +88,120 @@ export const createLifeIcon = (name, size, position, scene) => {
 
   return icon;
 };
+
+export const createLetterMesh = (letter, name, baseX, baseY, scene) => {
+  const letterSize = 5; // Height of each letter
+  const letterDefs = {
+    // Uppercase A-Z (X reversed: 5 - x for positioning, but coordinates are already mirrored)
+    'A': [[5, 0], [2.5, 5], [0, 0], [1, 1.5], [4, 1.5], [5, 0]],
+    'B': [[5, 0], [5, 5], [1, 5], [0, 4], [1, 2.5], [0, 1], [1, 0], [5, 0]],
+    'C': [[0, 0], [5, 0], [5, 5], [0, 5]],
+    'D': [[5, 0], [5, 5], [1, 5], [0, 4], [0, 1], [1, 0], [5, 0]],
+    'E': [[0, 0], [5, 0], [5, 5], [0, 5], [5, 5], [5, 2.5], [1, 2.5]],
+    'F': [[5, 0], [5, 5], [0, 5], [5, 2.5], [1, 2.5]],
+    'G': [[2.5, 2.5], [0, 2.5], [0, 0], [5, 0], [5, 5], [0, 5]],
+    'H': [[5, 0], [5, 5], [0, 5], [0, 0], [5, 2.5], [0, 2.5]],
+    'I': [[2.5, 0], [2.5, 5], [5, 0], [0, 0], [5, 5], [0, 5]],
+    'J': [[0, 0], [0, 5], [5, 5], [4, 4], [4, 0]],
+    'K': [[5, 0], [5, 5], [0, 5], [5, 2.5], [0, 0]],
+    'L': [[5, 5], [5, 0], [0, 0]],
+    'M': [[5, 0], [5, 5], [2.5, 2.5], [0, 5], [0, 0]],
+    'N': [[5, 0], [5, 5], [0, 0], [0, 5]],
+    'O': [[5, 0], [5, 5], [0, 5], [0, 0], [5, 0]],
+    'P': [[5, 0], [5, 5], [0, 5], [0, 2.5], [5, 2.5]],
+    'Q': [[5, 0], [5, 5], [0, 5], [0, 0], [5, 0], [2.5, 2.5], [0, 0]],
+    'R': [[5, 0], [5, 5], [0, 5], [0, 2.5], [5, 2.5], [2.5, 2.5], [0, 0]],
+    'S': [[0, 0], [5, 0], [5, 2.5], [0, 2.5], [0, 5], [5, 5]],
+    'T': [[5, 5], [0, 5], [2.5, 5], [2.5, 0]],
+    'U': [[5, 5], [5, 0], [0, 0], [0, 5]],
+    'V': [[5, 5], [2.5, 0], [0, 5]],
+    'W': [[5, 5], [4, 0], [2.5, 2.5], [1, 0], [0, 5]],
+    'X': [[5, 0], [0, 5], [5, 5], [0, 0]],
+    'Y': [[5, 5], [2.5, 2.5], [0, 5], [2.5, 0]],
+    'Z': [[5, 5], [0, 5], [5, 0], [0, 0]],
+    // Lowercase a-z (simplified, shorter versions, X reversed)
+    'a': [[4, 0], [4, 2.5], [2, 2.5], [1, 1.5], [2, 0], [4, 1]],
+    'b': [[5, 0], [5, 3], [3, 3], [2, 2], [3, 0], [5, 0]],
+    'c': [[2, 0], [4, 0], [5, 1], [4, 2], [2, 2]],
+    'd': [[2, 0], [2, 3], [4, 3], [5, 2], [4, 0], [2, 0]],
+    'e': [[2, 0], [5, 0], [5, 1.5], [3, 1.5], [5, 3], [2, 3]],
+    'f': [[4, 0], [4, 2], [5, 2], [3, 3], [4, 3]],
+    'g': [[2, 0], [4, 0], [5, 1], [4, 2], [2, 2], [2, -1], [3, -1]],
+    'h': [[5, 0], [5, 3], [3, 1.5], [2, 3]],
+    'i': [[4, 0], [4, 2], [5, 2], [3, 2], [4, 3]],
+    'j': [[3, 0], [3, 2], [4, 2], [4, -1]],
+    'k': [[5, 0], [5, 3], [4, 1.5], [2, 3], [4, 1], [2, 0]],
+    'l': [[4, 0], [4, 3], [5, 2]],
+    'm': [[5, 0], [5, 2], [4, 1], [3, 2], [3, 0], [2, 2]],
+    'n': [[5, 0], [5, 2], [3, 0], [3, 2]],
+    'o': [[5, 0], [5, 2], [3, 2], [3, 0], [5, 0]],
+    'p': [[5, 0], [5, 2], [3, 2], [3, 1], [5, 1]],
+    'q': [[5, 0], [5, 2], [3, 2], [3, 0], [4, 1], [2, -1]],
+    'r': [[5, 0], [5, 2], [3, 2], [4, 1]],
+    's': [[3, 0], [5, 0], [5, 1], [3, 1], [3, 2], [5, 2]],
+    't': [[5, 1], [3, 1], [4, 0], [4, 3]],
+    'u': [[5, 2], [5, 0], [3, 0], [3, 2]],
+    'v': [[5, 2], [4, 0], [3, 2]],
+    'w': [[5, 2], [4.5, 0], [4, 1], [3.5, 0], [3, 2]],
+    'x': [[5, 0], [3, 2], [5, 2], [3, 0]],
+    'y': [[5, 2], [4, 1], [3, 2], [4, 0], [4, -1]],
+    'z': [[5, 2], [3, 2], [5, 0], [3, 0]],
+    // Numbers 0-9 (X reversed)
+    '0': [[5, 0], [5, 5], [0, 5], [0, 0], [5, 0], [0, 5]],
+    '1': [[2.5, 0], [2.5, 5], [5, 4]],
+    '2': [[5, 5], [0, 5], [5, 0], [0, 0], [0, 2.5]],
+    '3': [[5, 5], [0, 5], [0, 0], [5, 0], [5, 2.5], [0, 2.5]],
+    '4': [[5, 5], [5, 2], [0, 2], [0, 5], [0, 0]],
+    '5': [[0, 5], [5, 5], [5, 2.5], [0, 2.5], [0, 0], [5, 0]],
+    '6': [[0, 5], [5, 5], [5, 0], [0, 0], [0, 2.5], [5, 2.5]],
+    '7': [[5, 5], [0, 5], [3, 0]],
+    '8': [[5, 0], [5, 5], [0, 5], [0, 0], [5, 0], [5, 2.5], [0, 2.5]],
+    '9': [[0, 0], [0, 5], [5, 5], [5, 2.5], [0, 2.5]]
+  };
+
+  const points = (letterDefs[letter] || []).map(([x, y]) => new Vector3(baseX + x, baseY + y, 0));
+  if (points.length === 0) return null;
+
+  const mesh = MeshBuilder.CreateLines(name, { points }, scene);
+  mesh.color = new Color3(1, 1, 1);
+  console.log(`Letter mesh created: ${letter}`, { name, baseX, baseY });
+  return mesh;
+};
+
+export const createShipFragments = (position, scene) => {
+  const fragments = [];
+  
+  // Fragment 1: Top to left
+  const fragment1 = MeshBuilder.CreateLines('fragment1', { 
+    points: [new Vector3(0, 1, 0), new Vector3(-0.5, -0.5, 0)] 
+  }, scene);
+  fragment1.position = position.clone();
+  fragment1.color = new Color3(1, 1, 1);
+  fragment1.velocity = new Vector3(-0.2, 0.2, 0);
+  fragment1.rotationVelocity = (Math.random() - 0.5) * 0.1; // Random spin ±0.05 rad/frame
+  fragment1.lifetime = 60;
+
+  // Fragment 2: Left to bottom
+  const fragment2 = MeshBuilder.CreateLines('fragment2', { 
+    points: [new Vector3(-0.5, -0.5, 0), new Vector3(0.5, -0.5, 0)] 
+  }, scene);
+  fragment2.position = position.clone();
+  fragment2.color = new Color3(1, 1, 1);
+  fragment2.velocity = new Vector3(0, -0.3, 0);
+  fragment2.rotationVelocity = (Math.random() - 0.5) * 0.1;
+  fragment2.lifetime = 60;
+
+  // Fragment 3: Bottom to top
+  const fragment3 = MeshBuilder.CreateLines('fragment3', { 
+    points: [new Vector3(0.5, -0.5, 0), new Vector3(0, 1, 0)] 
+  }, scene);
+  fragment3.position = position.clone();
+  fragment3.color = new Color3(1, 1, 1);
+  fragment3.velocity = new Vector3(0.2, 0.2, 0);
+  fragment3.rotationVelocity = (Math.random() - 0.5) * 0.1;
+  fragment3.lifetime = 60;
+
+  fragments.push(fragment1, fragment2, fragment3);
+  console.log('Ship fragments created at:', position);
+  return fragments;
+};

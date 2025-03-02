@@ -1,9 +1,10 @@
 import { Vector3 } from '../node_modules/@babylonjs/core/Maths/math.vector.js';
 import { FreeCamera } from '../node_modules/@babylonjs/core/Cameras/freeCamera.js';
 import { Color3 } from '../node_modules/@babylonjs/core/Maths/math.color.js';
-import { createUnlitTriangle, createAsteroid, createLifeIcon } from './meshUtils.js';
+import { createUnlitTriangle, createAsteroid, createLifeIcon, createLetterMesh, createShipFragments } from './meshUtils.js';
 
 export const setupGame = (scene, canvas) => {
+  console.log('setupGame: Starting');
   // Camera setup
   const cameraHeight = 500;
   const cameraPosition = new Vector3(0, 0, cameraHeight);
@@ -15,12 +16,9 @@ export const setupGame = (scene, canvas) => {
   camera.maxZ = 2000;
   console.log('Camera set up:', { position: cameraPosition, target: cameraTarget, fov: camera.fov, minZ: camera.minZ, maxZ: camera.maxZ });
 
-  // Game objects
-  const playerShip = createUnlitTriangle('playerShip', 1, new Vector3(0, 0, 0), new Vector3(0, 0, -(Math.PI / 2)), new Color3(1, 1, 1), scene);
-  console.log('Player ship created:', playerShip);
-
   // Physics state
   const shipState = {
+    playerShip: createUnlitTriangle('playerShip', 1, new Vector3(0, 0, 0), new Vector3(0, 0, -(Math.PI / 2)), new Color3(1, 1, 1), scene),
     velocity: new Vector3(0, 0, 0),
     acceleration: 0.02,
     bullets: [],
@@ -28,17 +26,24 @@ export const setupGame = (scene, canvas) => {
     asteroids: [],
     lives: 3,
     isAlive: true,
-    lifeIcons: []
+    lifeIcons: [],
+    gameOverMeshes: [],
+    deathFragments: []
   };
+  console.log('setupGame: shipState created:', { 
+    playerShipExists: !!shipState.playerShip, 
+    position: shipState.playerShip.position, 
+    rotation: shipState.playerShip.rotation 
+  });
 
-  // Calculate world dimensions (helper functions)
+  // Calculate world dimensions
   const worldWidth = () => cameraHeight * Math.tan(camera.fov / 2) * 2 * (canvas.clientWidth / canvas.clientHeight);
   const worldHeight = () => cameraHeight * Math.tan(camera.fov / 2) * 2;
 
   // Spawn initial asteroids
   const asteroidCount = 5;
   for (let i = 0; i < asteroidCount; i++) {
-    const size = 5 + Math.random() * 5; // 5–10 units
+    const size = 5 + Math.random() * 5;
     const x = (Math.random() - 0.5) * worldWidth();
     const y = (Math.random() - 0.5) * worldHeight();
     const asteroid = createAsteroid(`asteroid_${i}`, size, new Vector3(x, y, 0), scene);
@@ -56,69 +61,53 @@ export const setupGame = (scene, canvas) => {
     const halfWidth = worldWidth() / 2;
     const halfHeight = worldHeight() / 2;
     for (let i = 0; i < shipState.lives; i++) {
-      const iconX = halfWidth - 5 - i * 3; // Tighter spacing (5 units apart), stays left
-      const iconY = halfHeight - 5; // Same top offset
-      const icon = createLifeIcon(`life_${i}`, 1, new Vector3(iconX, iconY, 0), scene); // Size 1 for tighter fit
+      const iconX = halfWidth - 5 - i * 3;
+      const iconY = halfHeight - 5;
+      const icon = createLifeIcon(`life_${i}`, 1, new Vector3(iconX, iconY, 0), scene);
       shipState.lifeIcons.push(icon);
     }
     console.log('Lives display updated:', shipState.lives);
   };
   updateLivesDisplay();
 
-  // Setup game over display with mesh lines
-  const createGameOverText = (baseX, baseY) => {
-    const letterSize = 5; // Height of each letter
-    const spacing = 2; // Space between letters
-    const letters = [
-      // G
-      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, letterSize / 2], [letterSize / 2, letterSize / 2], [letterSize / 2, 0], [0, 0]],
-      // A
-      [[0, 0], [letterSize / 2, letterSize], [letterSize, 0], [letterSize * 0.75, letterSize / 2], [letterSize * 0.25, letterSize / 2], [0, 0]],
-      // M
-      [[0, 0], [0, letterSize], [letterSize / 2, letterSize / 2], [letterSize, letterSize], [letterSize, 0], [letterSize * 0.75, letterSize / 2], [letterSize * 0.25, letterSize / 2]],
-      // E
-      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, letterSize * 0.75], [letterSize / 2, letterSize * 0.75], [letterSize / 2, letterSize * 0.25], [letterSize, letterSize * 0.25], [letterSize, 0], [0, 0]],
-      // [space]
-      [],
-      // O
-      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, 0], [0, 0]],
-      // V
-      [[0, letterSize], [letterSize / 2, 0], [letterSize, letterSize], [letterSize * 0.75, letterSize * 0.25], [letterSize * 0.25, letterSize * 0.25]],
-      // E
-      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, letterSize * 0.75], [letterSize / 2, letterSize * 0.75], [letterSize / 2, letterSize * 0.25], [letterSize, letterSize * 0.25], [letterSize, 0], [0, 0]],
-      // R
-      [[0, 0], [0, letterSize], [letterSize, letterSize], [letterSize, letterSize / 2], [0, letterSize / 2], [letterSize, 0]]
-    ];
+  // Handle ship death animation and respawn
+  const animateShipDeath = (shipPosition) => {
+    const fragments = createShipFragments(shipPosition, scene);
+    shipState.deathFragments.push(...fragments);
+    console.log('Ship death animation started');
+  };
 
-    const meshes = [];
-    let currentX = baseX;
-    letters.forEach((letterPoints, index) => {
-      if (letterPoints.length > 0) {
-        const points = letterPoints.map(([x, y]) => new Vector3(currentX + x, baseY + y, 0));
-        const mesh = MeshBuilder.CreateLines(`gameOverLetter_${index}`, { points }, scene);
-        mesh.color = new Color3(1, 1, 1); // White lines
-        meshes.push(mesh);
-      }
-      currentX += letterSize + spacing; // Move to next letter position
-    });
-
-    return meshes;
+  const respawnShip = () => {
+    if (shipState.lives > 0) {
+      shipState.playerShip = createUnlitTriangle('playerShip', 1, new Vector3(0, 0, 0), new Vector3(0, 0, -(Math.PI / 2)), new Color3(1, 1, 1), scene);
+      shipState.velocity = new Vector3(0, 0, 0);
+      shipState.isAlive = true;
+      console.log('Ship respawned:', { position: shipState.playerShip.position });
+    }
   };
 
   const updateGameOverDisplay = () => {
     if (shipState.lives <= 0 && shipState.gameOverMeshes.length === 0) {
-      const totalWidth = 9 * 5 + 8 * 2; // 9 letters * 5 width + 8 spaces * 2
-      const baseX = -totalWidth / 2; // Center horizontally
-      const baseY = 0; // Center vertically
-      shipState.gameOverMeshes = createGameOverText(baseX, baseY);
+      const text = "GAME OVER";
+      const letterWidth = 5;
+      const spacing = 2;
+      const totalWidth = (letterWidth * text.length) + (spacing * (text.length - 1));
+      const baseX = totalWidth / 2; // Start at positive X (left), move to negative (right)
+      const baseY = 0;
+
+      let currentX = baseX;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const mesh = createLetterMesh(char === ' ' ? ' ' : char.toUpperCase(), `gameOverLetter_${i}`, currentX, baseY, scene);
+        if (mesh) shipState.gameOverMeshes.push(mesh);
+        currentX -= (letterWidth + spacing); // Move left (decrease X)
+      }
       console.log('Game over displayed');
     }
   };
 
   // Physics update loop
   const updatePhysics = () => {
-    const ship = playerShip;
-    const cameraFov = camera.fov;
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
     const worldHeightVal = worldHeight();
@@ -126,12 +115,10 @@ export const setupGame = (scene, canvas) => {
     const halfWidth = worldWidthVal / 2;
     const halfHeight = worldHeightVal / 2;
 
-    // Ship movement and wrapping (only if alive)
     if (shipState.isAlive) {
-      // Ship movement and wrapping
-      ship.position = ship.position.add(shipState.velocity);
-      let shipX = ship.position.x;
-      let shipY = ship.position.y;
+      shipState.playerShip.position = shipState.playerShip.position.add(shipState.velocity);
+      let shipX = shipState.playerShip.position.x;
+      let shipY = shipState.playerShip.position.y;
 
       if (shipX > halfWidth) shipX -= worldWidthVal;
       else if (shipX < -halfWidth) shipX += worldWidthVal;
@@ -139,22 +126,18 @@ export const setupGame = (scene, canvas) => {
       if (shipY > halfHeight) shipY -= worldHeightVal;
       else if (shipY < -halfHeight) shipY += worldHeightVal;
 
-      ship.position = new Vector3(shipX, shipY, 0);
+      shipState.playerShip.position = new Vector3(shipX, shipY, 0);
     }
 
-    // Bullet and asteroid updates
-    const bulletsToRemove = new Set(); // Use Set to avoid duplicates
+    const bulletsToRemove = new Set();
     const asteroidsToRemove = new Set();
     const newAsteroids = [];
 
-    // Bullet movement and wrapping
     shipState.bullets.forEach((bullet, index) => {
-      // Store previous position before moving
       const prevPosition = bullet.position.clone();
       bullet.position = bullet.position.add(bullet.velocity);
       bullet.lifetime -= 1;
 
-      // Wrap bullets
       let bulletX = bullet.position.x;
       let bulletY = bullet.position.y;
 
@@ -166,16 +149,13 @@ export const setupGame = (scene, canvas) => {
 
       bullet.position = new Vector3(bulletX, bulletY, 0);
 
-      // Check collisions with asteroids (swept collision)
       shipState.asteroids.forEach((asteroid, asteroidIndex) => {
         const hitRadius = asteroid.sizeCategory === 'large' ? 7.5 : asteroid.sizeCategory === 'medium' ? 4 : 2;
-
-        // Line-circle intersection check
         const toBullet = bullet.position.subtract(prevPosition);
         const toAsteroid = asteroid.position.subtract(prevPosition);
         const closestPointDist = toAsteroid.dot(toBullet) / toBullet.lengthSquared();
-        const closestPoint = closestPointDist >= 0 && closestPointDist <= 1 ? 
-          prevPosition.add(toBullet.scale(closestPointDist)) : 
+        const closestPoint = closestPointDist >= 0 && closestPointDist <= 1 ?
+          prevPosition.add(toBullet.scale(closestPointDist)) :
           Vector3.Distance(bullet.position, asteroid.position) < Vector3.Distance(prevPosition, asteroid.position) ? bullet.position : prevPosition;
         const distance = Vector3.Distance(closestPoint, asteroid.position);
 
@@ -208,26 +188,26 @@ export const setupGame = (scene, canvas) => {
       }
     });
 
-    // Check ship-asteroid collisions
     if (shipState.isAlive) {
       shipState.asteroids.forEach((asteroid, asteroidIndex) => {
-        const distance = Vector3.Distance(ship.position, asteroid.position);
+        const distance = Vector3.Distance(shipState.playerShip.position, asteroid.position);
         const hitRadius = asteroid.sizeCategory === 'large' ? 7.5 : asteroid.sizeCategory === 'medium' ? 4 : 2;
-        if (distance < hitRadius + 1) { // Ship radius ~1
+        if (distance < hitRadius + 1) {
           shipState.isAlive = false;
           shipState.lives -= 1;
-          scene.removeMesh(ship);
+          animateShipDeath(shipState.playerShip.position.clone());
+          scene.removeMesh(shipState.playerShip);
           updateLivesDisplay();
           updateGameOverDisplay();
           console.log('Ship hit by asteroid! Lives remaining:', shipState.lives);
+          setTimeout(respawnShip, 3000);
         }
       });
     }
 
-    // Remove bullets and asteroids after iteration
     Array.from(bulletsToRemove).sort((a, b) => b - a).forEach(index => {
       const bullet = shipState.bullets[index];
-      if (bullet) { // Check if bullet exists
+      if (bullet) {
         scene.removeMesh(bullet);
         bullet.dispose();
         shipState.bullets.splice(index, 1);
@@ -236,17 +216,15 @@ export const setupGame = (scene, canvas) => {
 
     Array.from(asteroidsToRemove).sort((a, b) => b - a).forEach(index => {
       const asteroid = shipState.asteroids[index];
-      if (asteroid) { // Check if asteroid exists
+      if (asteroid) {
         scene.removeMesh(asteroid);
         asteroid.dispose();
         shipState.asteroids.splice(index, 1);
       }
     });
 
-    // Add new asteroids
     shipState.asteroids.push(...newAsteroids);
 
-    // Asteroid movement and wrapping
     shipState.asteroids.forEach((asteroid) => {
       asteroid.position = asteroid.position.add(asteroid.velocity);
 
@@ -261,8 +239,23 @@ export const setupGame = (scene, canvas) => {
 
       asteroid.position = new Vector3(asteroidX, asteroidY, 0);
     });
+
+    shipState.deathFragments.forEach((fragment, index) => {
+      fragment.position = fragment.position.add(fragment.velocity);
+      fragment.rotation.z += fragment.rotationVelocity;
+      fragment.lifetime -= 1;
+      if (fragment.lifetime <= 0) {
+        scene.removeMesh(fragment);
+        fragment.dispose();
+        shipState.deathFragments.splice(index, 1);
+      }
+    });
   };
   scene.onBeforeRenderObservable.add(updatePhysics);
 
-  return { playerShip, shipState };
+  console.log('setupGame: Returning shipState:', { 
+    playerShipExists: !!shipState.playerShip, 
+    lives: shipState.lives 
+  });
+  return { shipState };
 };

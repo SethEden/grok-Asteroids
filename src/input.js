@@ -3,6 +3,11 @@ import { Color3 } from '../node_modules/@babylonjs/core/Maths/math.color.js';
 import { createBullet } from './meshUtils.js';
 
 export const setupInput = (canvas, gameObjects) => {
+  console.log('setupInput: gameObjects received:', { 
+    shipStateExists: !!gameObjects.shipState, 
+    playerShipExists: !!gameObjects.shipState?.playerShip 
+  });
+
   const cameraHeight = 500;
   const cameraFov = 0.2;
   const canvasWidth = canvas.clientWidth;
@@ -23,7 +28,8 @@ export const setupInput = (canvas, gameObjects) => {
     const worldX = (0.5 - mouseX / canvasWidth) * worldWidth;
     const worldY = (0.5 - mouseY / canvasHeight) * worldHeight;
 
-    const ship = gameObjects.playerShip;
+    const ship = gameObjects.shipState.playerShip;
+    console.log('updateShipRotation: ship:', { shipExists: !!ship });
     const angle = Math.atan2(worldY - ship.position.y, worldX - ship.position.x);
     ship.rotation.z = angle - Math.PI / 2;
     console.log('Ship rotated to:', { angle, rotationZ: ship.rotation.z });
@@ -31,7 +37,8 @@ export const setupInput = (canvas, gameObjects) => {
 
   // Apply thrust and bullet firing
   const applyThrust = () => {
-    const ship = gameObjects.playerShip;
+    const ship = gameObjects.shipState.playerShip;
+    console.log('applyThrust: ship:', { shipExists: !!ship });
     const state = gameObjects.shipState;
     const angle = ship.rotation.z + Math.PI / 2;
 
@@ -105,7 +112,6 @@ export const setupInput = (canvas, gameObjects) => {
   console.log('Mouse rotation and key thrust handlers added');
 
   // Start ship at center
-  const ship = gameObjects.playerShip;
-  ship.position = new Vector3(0, 0, 0);
-  console.log('Ship initialized at center:', ship.position);
+  gameObjects.shipState.playerShip.position = new Vector3(0, 0, 0);
+  console.log('Ship initialized at center:', gameObjects.shipState.playerShip.position);
 };
