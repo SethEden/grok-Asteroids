@@ -37,6 +37,8 @@ export const setupInput = (canvas, gameObjects) => {
 
   // Apply thrust and bullet firing
   const applyThrust = () => {
+    if (gameObjects.shipState.isPaused) return; // Skip inputs if paused
+
     const ship = gameObjects.shipState.playerShip;
     console.log('applyThrust: ship:', { shipExists: !!ship });
     const state = gameObjects.shipState;
@@ -94,6 +96,10 @@ export const setupInput = (canvas, gameObjects) => {
         keys.w = true;
         break;
       case ' ': keys.space = true; break;
+      case 'p': 
+        keys.p = true;
+        gameObjects.togglePause(); // Call the togglePause function from game.js
+        break;
     }
   });
 
@@ -105,6 +111,7 @@ export const setupInput = (canvas, gameObjects) => {
       case 'f': keys.f = false; break;
       case 'w': keys.w = false; break;
       case ' ': keys.space = false; break;
+      case 'p': keys.p = false; break;
     }
   });
 

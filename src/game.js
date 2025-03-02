@@ -26,8 +26,10 @@ export const setupGame = (scene, canvas) => {
     asteroids: [],
     lives: 3,
     isAlive: true,
+    isPaused: false, // Add pause state
     lifeIcons: [],
     gameOverMeshes: [],
+    pausedMeshes: [], // Store "PAUSED" meshes
     deathFragments: []
   };
   console.log('setupGame: shipState created:', { 
@@ -70,6 +72,48 @@ export const setupGame = (scene, canvas) => {
   };
   updateLivesDisplay();
 
+  // Handle pause/resume
+  const togglePause = () => {
+    shipState.isPaused = !shipState.isPaused;
+    if (shipState.isPaused) {
+      updatePausedDisplay(); // Show "PAUSED"
+    } else {
+      clearPausedDisplay(); // Hide "PAUSED"
+    }
+    console.log('Game paused:', shipState.isPaused);
+  };
+
+  // Display "PAUSED" text
+  const updatePausedDisplay = () => {
+    if (shipState.pausedMeshes.length === 0) {
+      const text = "PAUSED";
+      const letterWidth = 5;
+      const spacing = 2;
+      const totalWidth = (letterWidth * text.length) + (spacing * (text.length - 1));
+      const baseX = totalWidth / 2; // Start at positive X (left), move to negative (right)
+      const baseY = -10; // Slightly above center for visibility
+
+      let currentX = baseX;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const mesh = createLetterMesh(char === ' ' ? ' ' : char.toUpperCase(), `pausedLetter_${i}`, currentX, baseY, scene);
+        if (mesh) shipState.pausedMeshes.push(mesh);
+        currentX -= (letterWidth + spacing); // Move left (decrease X)
+      }
+      console.log('Paused display shown');
+    }
+  };
+
+  // Clear "PAUSED" text
+  const clearPausedDisplay = () => {
+    shipState.pausedMeshes.forEach(mesh => {
+      scene.removeMesh(mesh);
+      mesh.dispose();
+    });
+    shipState.pausedMeshes = [];
+    console.log('Paused display cleared');
+  };
+
   // Handle ship death animation and respawn
   const animateShipDeath = (shipPosition) => {
     const fragments = createShipFragments(shipPosition, scene);
@@ -108,6 +152,8 @@ export const setupGame = (scene, canvas) => {
 
   // Physics update loop
   const updatePhysics = () => {
+    if (shipState.isPaused) return; // Skip physics if paused
+
     const canvasWidth = canvas.clientWidth;
     const canvasHeight = canvas.clientHeight;
     const worldHeightVal = worldHeight();
@@ -257,5 +303,5 @@ export const setupGame = (scene, canvas) => {
     playerShipExists: !!shipState.playerShip, 
     lives: shipState.lives 
   });
-  return { shipState };
+  return { shipState, togglePause };
 };
